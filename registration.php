@@ -284,7 +284,7 @@
 <body>
     <?php
     // Database connection parameters
-    $servername = "monorail.proxy.rlwy.net";
+    $host = "monorail.proxy.rlwy.net";
     $username = "root";
     $password = "JiRyTsiTeKxHbWbtlSXbtFhRJvGASZod";
     $dbname = "login_register";
@@ -293,7 +293,7 @@
     $registration_success = false;
 
     // Establishing a connection to MySQL
-    $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn = new mysqli($host, $username, $password, $dbname);
 
     // Checking the connection
     if ($conn->connect_error) {
