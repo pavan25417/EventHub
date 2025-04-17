@@ -284,9 +284,9 @@
 <body>
     <?php
     // Database connection parameters
-    $servername = "localhost";
+    $servername = "monorail.proxy.rlwy.net";
     $username = "root";
-    $password = "";
+    $password = "JiRyTsiTeKxHbWbtlSXbtFhRJvGASZod";
     $dbname = "login_register";
 
     // Flag to track registration success
