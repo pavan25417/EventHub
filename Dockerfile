@@ -1,15 +1,19 @@
-# Use the official PHP image with Apache
+# Use official PHP image with Apache
 FROM php:8.1-apache
 
-# Copy everything into the Apache web root
+# Install PDO and MySQL extensions
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable Apache rewrite module (useful for Laravel or clean URLs)
+RUN a2enmod rewrite
+
+# Set working directory and copy project files
+WORKDIR /var/www/html
 COPY . /var/www/html/
 
-# Set proper file permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Enable Apache rewrite module (useful for clean URLs or .htaccess files)
-RUN a2enmod rewrite
-
-# Expose port 80 (standard HTTP port)
+# Expose port 80
 EXPOSE 80
