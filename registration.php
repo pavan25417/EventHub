@@ -1,16 +1,11 @@
 <?php
-// Load .env for local dev (optional)
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-}
+// Skip dotenv for now to avoid using unresolved env vars
 
-// ✅ Replace with your actual Railway MySQL host from the DB plugin
-$host = getenv("MYSQLHOST") ?: "containers-us-west-123.railway.app"; // ← update this if yours differs
-$db   = getenv("MYSQLDATABASE") ?: "login_register";
-$user = getenv("MYSQLUSER") ?: "root";
-$pass = getenv("MYSQLPASSWORD") ?: "123"; // Or use the real password from Railway
+// ✅ Real Railway DB credentials
+$host = "containers-us-west-123.railway.app";  // ← Replace with your actual Railway host if it's different
+$db   = "railway";
+$user = "root";
+$pass = "lUbclqVhSmqhZZCJBourWZVCzHdyLSWP";  // ✅ Use your actual DB password
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;port=3306;dbname=$db;charset=$charset";
