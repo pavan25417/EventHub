@@ -1,14 +1,16 @@
 <?php
-// Skip dotenv for now to avoid using unresolved env vars
+// Skip dotenv — use Render-provided env vars
 
-// ✅ Real Railway DB credentials
-$host = "containers-us-west-123.railway.app";  // ← Replace with your actual Railway host if it's different
-$db   = "railway";
-$user = "root";
-$pass = "lUbclqVhSmqhZZCJBourWZVCzHdyLSWP";  // ✅ Use your actual DB password
+// ✅ Get DB connection info from Render env vars (set these in your Render dashboard)
+$host = getenv("MYSQLHOST");        // e.g., silly-snail.up.railway.app
+$port = getenv("MYSQLPORT") ?: 3306; // e.g., 12345
+$db   = getenv("MYSQLDATABASE");    // e.g., railway
+$user = getenv("MYSQLUSER");        // e.g., root
+$pass = getenv("MYSQLPASSWORD");    // your real Railway DB password
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;port=3306;dbname=$db;charset=$charset";
+// ✅ Set DSN string
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
