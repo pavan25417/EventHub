@@ -1,27 +1,30 @@
 <?php
-// Skip dotenv — use Render-provided env vars
+// Get DB connection info from environment variables (provided by Railway or Render)
+$host = getenv("MYSQLHOST") ?: "mysql.railway.internal";  // Default to private networking if not set
+$port = getenv("MYSQLPORT") ?: 3306;                      // Default to MySQL port 3306
+$db   = getenv("MYSQLDATABASE");                           // Database name (from environment)
+$user = getenv("MYSQLUSER");                               // MySQL username (from environment)
+$pass = getenv("MYSQLPASSWORD");                           // MySQL password (from environment)
+$charset = 'utf8mb4';                                      // Character set for the connection
 
-// ✅ Get DB connection info from Render env vars (set these in your Render dashboard)
-$host = getenv("MYSQLHOST");        // e.g., silly-snail.up.railway.app
-$port = getenv("MYSQLPORT") ?: 3306; // e.g., 12345
-$db   = getenv("MYSQLDATABASE");    // e.g., railway
-$user = getenv("MYSQLUSER");        // e.g., root
-$pass = getenv("MYSQLPASSWORD");    // your real Railway DB password
-$charset = 'utf8mb4';
-
-// ✅ Set DSN string
+// Set DSN string for PDO connection
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+
+// PDO options
 $options = [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Enable exceptions for errors
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, // Fetch data as associative arrays
 ];
 
+// Registration logic
 $registration_success = false;
 $registration_error = "";
 
 try {
+    // Attempt to establish a connection to the database
     $pdo = new PDO($dsn, $user, $pass, $options);
 
+    // Handle registration process
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $name = $_POST['name'];
         $email = $_POST['email'];
@@ -29,16 +32,16 @@ try {
         $phone_number = $_POST['phone_number'];
         $username_input = $_POST['username'];
         $password_raw = $_POST['password'];
-        $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT);
+        $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT); // Hash password
 
-        // Check if email or username exists
+        // Check if email or username already exists
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
         $stmt->execute([$email, $username_input]);
 
         if ($stmt->rowCount() > 0) {
             $registration_error = "Username or Email already exists!";
         } else {
-            // Insert new user
+            // Insert new user into database
             $stmt = $pdo->prepare("INSERT INTO users (name, email, registration_number, phone_number, username, password)
                                    VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, $email, $registration_number, $phone_number, $username_input, $hashed_password]);
@@ -46,9 +49,11 @@ try {
         }
     }
 } catch (PDOException $e) {
+    // Catch and display database errors
     $registration_error = "Database error: " . $e->getMessage();
 }
 ?>
+
 
 
 <!DOCTYPE html>
