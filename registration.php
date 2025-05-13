@@ -6,14 +6,14 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     $dotenv->load();
 }
 
-// Environment values (Railway or fallback)
-$host = getenv("MYSQLHOST") ?: "railway";
+// ✅ Replace with your actual Railway MySQL host from the DB plugin
+$host = getenv("MYSQLHOST") ?: "containers-us-west-123.railway.app"; // ← update this if yours differs
 $db   = getenv("MYSQLDATABASE") ?: "login_register";
 $user = getenv("MYSQLUSER") ?: "root";
-$pass = getenv("MYSQLPASSWORD") ?: "123";
+$pass = getenv("MYSQLPASSWORD") ?: "123"; // Or use the real password from Railway
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;port=3306;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -52,6 +52,7 @@ try {
     $registration_error = "Database error: " . $e->getMessage();
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
