@@ -6,49 +6,51 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     $dotenv->load();
 }
 
-// Database connection from Railway env or fallback values
-$servername = getenv("MYSQLHOST") ?: "railway";
-$username   = getenv("MYSQLUSER") ?: "root";
-$password   = getenv("MYSQLPASSWORD") ?: "123";
-$dbname     = getenv("MYSQLDATABASE") ?: "login_register";
+// Environment values (Railway or fallback)
+$host = getenv("MYSQLHOST") ?: "railway";
+$db   = getenv("MYSQLDATABASE") ?: "login_register";
+$user = getenv("MYSQLUSER") ?: "root";
+$pass = getenv("MYSQLPASSWORD") ?: "123";
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+];
 
 $registration_success = false;
 $registration_error = "";
 
-// Connect to DB
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+try {
+    $pdo = new PDO($dsn, $user, $pass, $options);
 
-// Handle POST
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $registration_number = mysqli_real_escape_string($conn, $_POST['registration_number']);
-    $phone_number = mysqli_real_escape_string($conn, $_POST['phone_number']);
-    $username_input = mysqli_real_escape_string($conn, $_POST['username']);
-    $password_raw = mysqli_real_escape_string($conn, $_POST['password']);
-    $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT);
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $name = $_POST['name'];
+        $email = $_POST['email'];
+        $registration_number = $_POST['registration_number'];
+        $phone_number = $_POST['phone_number'];
+        $username_input = $_POST['username'];
+        $password_raw = $_POST['password'];
+        $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT);
 
-    // Check for duplicate username or email
-    $check_query = "SELECT * FROM users WHERE email='$email' OR username='$username_input'";
-    $result = $conn->query($check_query);
-    if ($result->num_rows > 0) {
-        $registration_error = "Username or Email already exists!";
-    } else {
-        $sql = "INSERT INTO users (name, email, registration_number, phone_number, username, password)
-                VALUES ('$name', '$email', '$registration_number', '$phone_number', '$username_input', '$hashed_password')";
+        // Check if email or username exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
+        $stmt->execute([$email, $username_input]);
 
-        if ($conn->query($sql) === TRUE) {
-            $registration_success = true;
+        if ($stmt->rowCount() > 0) {
+            $registration_error = "Username or Email already exists!";
         } else {
-            $registration_error = "Error: " . $conn->error;
+            // Insert new user
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, registration_number, phone_number, username, password)
+                                   VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $email, $registration_number, $phone_number, $username_input, $hashed_password]);
+            $registration_success = true;
         }
     }
+} catch (PDOException $e) {
+    $registration_error = "Database error: " . $e->getMessage();
 }
-
-$conn->close();
 ?>
 
 <!DOCTYPE html>
