@@ -1,11 +1,62 @@
+<?php
+// Load .env for local dev (optional)
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
+
+// Database connection from Railway env or fallback values
+$servername = getenv("MYSQLHOST") ?: "railway";
+$username   = getenv("MYSQLUSER") ?: "root";
+$password   = getenv("MYSQLPASSWORD") ?: "123";
+$dbname     = getenv("MYSQLDATABASE") ?: "login_register";
+
+$registration_success = false;
+$registration_error = "";
+
+// Connect to DB
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Handle POST
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = mysqli_real_escape_string($conn, $_POST['name']);
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $registration_number = mysqli_real_escape_string($conn, $_POST['registration_number']);
+    $phone_number = mysqli_real_escape_string($conn, $_POST['phone_number']);
+    $username_input = mysqli_real_escape_string($conn, $_POST['username']);
+    $password_raw = mysqli_real_escape_string($conn, $_POST['password']);
+    $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT);
+
+    // Check for duplicate username or email
+    $check_query = "SELECT * FROM users WHERE email='$email' OR username='$username_input'";
+    $result = $conn->query($check_query);
+    if ($result->num_rows > 0) {
+        $registration_error = "Username or Email already exists!";
+    } else {
+        $sql = "INSERT INTO users (name, email, registration_number, phone_number, username, password)
+                VALUES ('$name', '$email', '$registration_number', '$phone_number', '$username_input', '$hashed_password')";
+
+        if ($conn->query($sql) === TRUE) {
+            $registration_success = true;
+        } else {
+            $registration_error = "Error: " . $conn->error;
+        }
+    }
+}
+
+$conn->close();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
     <title>Registration Page</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"
-        integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css">
     <style>
         .success-message {
             color: green;
@@ -272,99 +323,33 @@
     }
 }
 
+  
+        <?php include "styles.css"; ?>
     </style>
 </head>
-<div class="background-shapes">
-        <div class="background-square square1"></div>
-        <div class="background-square square2"></div>
-        <div class="background-square square3"></div>
-        <div class="background-square square4"></div>
-        <div class="background-square square5"></div>
-    </div>
 <body>
-    <?php
-    // Database connection parameters
-    $host = "monorail.proxy.rlwy.net";
-    $username = "root";
-    $password = "JiRyTsiTeKxHbWbtlSXbtFhRJvGASZod";
-    $dbname = "login_register";
+<div class="background-shapes">
+    <div class="background-square square1"></div>
+    <div class="background-square square2"></div>
+    <div class="background-square square3"></div>
+    <div class="background-square square4"></div>
+    <div class="background-square square5"></div>
+</div>
 
-    // Flag to track registration success
-    $registration_success = false;
-
-    // Establishing a connection to MySQL
-    $conn = new mysqli($host, $username, $password, $dbname);
-
-    // Checking the connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Handling form submission
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        // Retrieving and sanitizing form data
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $email = mysqli_real_escape_string($conn, $_POST['email']);
-        $registration_number = mysqli_real_escape_string($conn, $_POST['registration_number']);
-        $phone_number = mysqli_real_escape_string($conn, $_POST['phone_number']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $password = mysqli_real_escape_string($conn, $_POST['password']);
-        
-        // Hashing the password for security
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        // SQL query to insert data into users table
-        $sql = "INSERT INTO users (name, email, registration_number, phone_number, username, password)
-                VALUES ('$name', '$email', '$registration_number', '$phone_number', '$username', '$hashed_password')";
-        
-        if ($conn->query($sql) === TRUE) {
-            $registration_success = true;
-        } else {
-            echo "Error: " . $sql . "<br>" . $conn->error;
-        }
-    }
-
-    // Closing the database connection
-    $conn->close();
-    ?>
-
-    <?php if ($registration_success): ?>
-         <!-- JavaScript to show popup -->
-         <script>
-            window.onload = function() {
-                // Show popup modal
-                alert("Registration successful! Please login to continue.");
-                // Redirect to login page
-                window.location.href = "login.php";
-            };
-        </script>
-        <!-- <div class="success-message">
-            Registration successful! Please <a href="login.php">  login  </a> to continue.
-        </div> -->
-    <?php else: ?>
-        <div class="container">
+<?php if ($registration_success): ?>
+    <script>
+        window.onload = function() {
+            alert("Registration successful! Please login to continue.");
+            window.location.href = "login.php";
+        };
+    </script>
+<?php else: ?>
+    <div class="container">
         <h2>Sign Up</h2>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
-            <!-- <label for="name">Name:</label><br>
-            <input type="text" id="name" name="name" required><br><br>
-            
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" name="email" required><br><br>
-            
-            <label for="registration_number">Registration Number:</label><br>
-            <input type="text" id="registration_number" name="registration_number" required><br><br>
-            
-            <label for="phone_number">Phone Number:</label><br>
-            <input type="text" id="phone_number" name="phone_number" required><br><br>
-            
-            <label for="username">Username:</label><br>
-            <input type="text" id="username" name="username" required><br><br>
-            
-            <label for="password">Password:</label><br>
-            <input type="password" id="password" name="password" required><br><br>
-            
-            <input type="submit" value="Register"> -->
-            
+        <?php if (!empty($registration_error)): ?>
+            <div class="alert alert-danger"><?php echo $registration_error; ?></div>
+        <?php endif; ?>
+        <form action="" method="POST">
             <div class="form-column">
                 <label for="name">Name:</label>
                 <input type="text" id="name" name="name" placeholder="Enter your name" required>
@@ -396,7 +381,7 @@
                 </div>
             </div>
         </form>
-        </div>
-    <?php endif; ?>
+    </div>
+<?php endif; ?>
 </body>
 </html>
