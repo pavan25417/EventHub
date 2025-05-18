@@ -1,11 +1,67 @@
+<?php
+// Get DB connection info from environment variables (provided by Railway or Render)
+$host = getenv("MYSQLHOST") ?: "mysql.railway.internal";  // Default to private networking if not set
+$port = getenv("MYSQLPORT") ?: 3306;                      // Default to MySQL port 3306
+$db   = getenv("MYSQLDATABASE");                           // Database name (from environment)
+$user = getenv("MYSQLUSER");                               // MySQL username (from environment)
+$pass = getenv("MYSQLPASSWORD");                           // MySQL password (from environment)
+$charset = 'utf8mb4';                                      // Character set for the connection
+
+// Set DSN string for PDO connection
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+
+// PDO options
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Enable exceptions for errors
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, // Fetch data as associative arrays
+];
+
+// Registration logic
+$registration_success = false;
+$registration_error = "";
+
+try {
+    // Attempt to establish a connection to the database
+    $pdo = new PDO($dsn, $user, $pass, $options);
+
+    // Handle registration process
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $name = $_POST['name'];
+        $email = $_POST['email'];
+        $registration_number = $_POST['registration_number'];
+        $phone_number = $_POST['phone_number'];
+        $username_input = $_POST['username'];
+        $password_raw = $_POST['password'];
+        $hashed_password = password_hash($password_raw, PASSWORD_DEFAULT); // Hash password
+
+        // Check if email or username already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
+        $stmt->execute([$email, $username_input]);
+
+        if ($stmt->rowCount() > 0) {
+            $registration_error = "Username or Email already exists!";
+        } else {
+            // Insert new user into database
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, registration_number, phone_number, username, password)
+                                   VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $email, $registration_number, $phone_number, $username_input, $hashed_password]);
+            $registration_success = true;
+        }
+    }
+} catch (PDOException $e) {
+    // Catch and display database errors
+    $registration_error = "Database error: " . $e->getMessage();
+}
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
     <title>Registration Page</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"
-        integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css">
     <style>
         .success-message {
             color: green;
@@ -272,99 +328,33 @@
     }
 }
 
+  
+        <?php include "styles.css"; ?>
     </style>
 </head>
-<div class="background-shapes">
-        <div class="background-square square1"></div>
-        <div class="background-square square2"></div>
-        <div class="background-square square3"></div>
-        <div class="background-square square4"></div>
-        <div class="background-square square5"></div>
-    </div>
 <body>
-    <?php
-    // Database connection parameters
-    $servername = "localhost";
-    $username = "root";
-    $password = "";
-    $dbname = "login_register";
+<div class="background-shapes">
+    <div class="background-square square1"></div>
+    <div class="background-square square2"></div>
+    <div class="background-square square3"></div>
+    <div class="background-square square4"></div>
+    <div class="background-square square5"></div>
+</div>
 
-    // Flag to track registration success
-    $registration_success = false;
-
-    // Establishing a connection to MySQL
-    $conn = new mysqli($servername, $username, $password, $dbname);
-
-    // Checking the connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Handling form submission
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        // Retrieving and sanitizing form data
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $email = mysqli_real_escape_string($conn, $_POST['email']);
-        $registration_number = mysqli_real_escape_string($conn, $_POST['registration_number']);
-        $phone_number = mysqli_real_escape_string($conn, $_POST['phone_number']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $password = mysqli_real_escape_string($conn, $_POST['password']);
-        
-        // Hashing the password for security
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        // SQL query to insert data into users table
-        $sql = "INSERT INTO users (name, email, registration_number, phone_number, username, password)
-                VALUES ('$name', '$email', '$registration_number', '$phone_number', '$username', '$hashed_password')";
-        
-        if ($conn->query($sql) === TRUE) {
-            $registration_success = true;
-        } else {
-            echo "Error: " . $sql . "<br>" . $conn->error;
-        }
-    }
-
-    // Closing the database connection
-    $conn->close();
-    ?>
-
-    <?php if ($registration_success): ?>
-         <!-- JavaScript to show popup -->
-         <script>
-            window.onload = function() {
-                // Show popup modal
-                alert("Registration successful! Please login to continue.");
-                // Redirect to login page
-                window.location.href = "login.php";
-            };
-        </script>
-        <!-- <div class="success-message">
-            Registration successful! Please <a href="login.php">  login  </a> to continue.
-        </div> -->
-    <?php else: ?>
-        <div class="container">
+<?php if ($registration_success): ?>
+    <script>
+        window.onload = function() {
+            alert("Registration successful! Please login to continue.");
+            window.location.href = "login.php";
+        };
+    </script>
+<?php else: ?>
+    <div class="container">
         <h2>Sign Up</h2>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
-            <!-- <label for="name">Name:</label><br>
-            <input type="text" id="name" name="name" required><br><br>
-            
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" name="email" required><br><br>
-            
-            <label for="registration_number">Registration Number:</label><br>
-            <input type="text" id="registration_number" name="registration_number" required><br><br>
-            
-            <label for="phone_number">Phone Number:</label><br>
-            <input type="text" id="phone_number" name="phone_number" required><br><br>
-            
-            <label for="username">Username:</label><br>
-            <input type="text" id="username" name="username" required><br><br>
-            
-            <label for="password">Password:</label><br>
-            <input type="password" id="password" name="password" required><br><br>
-            
-            <input type="submit" value="Register"> -->
-            
+        <?php if (!empty($registration_error)): ?>
+            <div class="alert alert-danger"><?php echo $registration_error; ?></div>
+        <?php endif; ?>
+        <form action="" method="POST">
             <div class="form-column">
                 <label for="name">Name:</label>
                 <input type="text" id="name" name="name" placeholder="Enter your name" required>
@@ -396,7 +386,7 @@
                 </div>
             </div>
         </form>
-        </div>
-    <?php endif; ?>
+    </div>
+<?php endif; ?>
 </body>
 </html>
